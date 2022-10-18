@@ -1,6 +1,12 @@
+import torch.nn.functional as F
 from torch import Tensor, nn
 
 from src.data_types import TLayer
+
+
+class NormalizeLayer(nn.Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return F.normalize(x, dim=-1)
 
 
 class NormAndTransform(nn.Module):
@@ -31,7 +37,6 @@ class FeedForward(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, dim: int, num_layers: int, num_heads: int, mlp_hidden_dim, dropout: float = 0):
         super().__init__()
-        nn.MultiheadAttention()
         self.layers  = []
         for _ in range(num_layers):
             transformer_layer = nn.ModuleList([
