@@ -6,11 +6,6 @@ from torch import Tensor, nn
 from src.utils.position_embeddings import get_2d_sincos_pos_embed
 
 
-class NormalizeLayer(nn.Module):
-    def forward(self, x: Tensor) -> Tensor:
-        return F.normalize(x, dim=-1)
-
-
 class Transformer(nn.Module):
     def __init__(self, dim: int, num_layers: int, num_heads: int, mlp_hidden_dim, dropout: float = 0):
         super().__init__()
@@ -91,3 +86,7 @@ class ViTDecoder(nn.Module):
         x = self.transformer(x)
         x = self.to_pixel(x)
         return x
+
+    def get_last_layer(self) -> nn.Parameter:
+        return self.to_pixel[-1].weight
+
