@@ -3,9 +3,12 @@ from abc import ABC, abstractmethod
 import torch
 from torch import Tensor, nn
 
-from models.vit_vqgan.layers import NormalizeLayer
 from src.data_types import QuantizerOutput
 
+
+class NormalizeLayer(nn.Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return torch.nn.functional.normolize(x, dim=-1)
 
 class BaseQuantizer(nn.Module, ABC):
     def __init__(
