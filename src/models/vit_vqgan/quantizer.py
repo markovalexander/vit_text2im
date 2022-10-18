@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 import torch
 from torch import Tensor, nn
 
+from models.vit_vqgan.layers import NormalizeLayer
 from src.data_types import QuantizerOutput
-from src.models.vit_vqgan.layers import NormalizeLayer
 
 
 class BaseQuantizer(nn.Module, ABC):

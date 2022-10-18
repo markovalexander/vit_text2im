@@ -3,7 +3,6 @@ import torch.nn.functional as F
 from einops.layers.torch import Rearrange
 from torch import Tensor, nn
 
-from src.data_types import TLayer
 from src.utils.position_embeddings import get_2d_sincos_pos_embed
 
 
