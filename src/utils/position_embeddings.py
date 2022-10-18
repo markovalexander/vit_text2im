@@ -38,7 +38,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim: int, pos: np.array):
     omega = 1. / 10000**omega
 
     pos = pos.reshape(-1)
-    out = np.einsum('m,d->md', pos, omega)
+    out = pos[:, None] * omega[None, :]
 
     emb_sin = np.sin(out)
     emb_cos = np.cos(out)
