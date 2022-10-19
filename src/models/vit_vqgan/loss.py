@@ -1,3 +1,6 @@
+# ------------------------------------------------------------------------------------------------------------
+# Copied from enhancing-transformers by Thuan H. Nguyen (https://github.com/thuanz123/enhancing-transformers)
+# ------------------------------------------------------------------------------------------------------------
 from typing import Optional
 
 import lpips

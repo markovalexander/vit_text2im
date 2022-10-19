@@ -29,7 +29,7 @@ def hinge_d_loss(logits_fake: torch.Tensor, logits_real: Optional[torch.Tensor] 
 
 def vanilla_d_loss(logits_fake: torch.Tensor, logits_real: Optional[torch.Tensor] = None) -> torch.Tensor:
     loss_fake = F.softplus(-logits_fake).mean() * 2 if logits_real is None else F.softplus(logits_fake).mean()
-    loss_real = 0 if logits_real is None else F.softplus(-logits_real).mean()
+    loss_real = 0 if logits_real is None else F.softplus(-logits_real).mean()  # pylint: disable=invalid-unary-operand-type
 
     return 0.5 * (loss_real + loss_fake)
 
