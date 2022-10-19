@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 from einops.layers.torch import Rearrange
 from torch import Tensor, nn
 
