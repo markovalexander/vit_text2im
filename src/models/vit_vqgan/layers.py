@@ -89,4 +89,3 @@ class ViTDecoder(nn.Module):
 
     def get_last_layer(self) -> nn.Parameter:
         return self.to_pixel[-1].weight
-
