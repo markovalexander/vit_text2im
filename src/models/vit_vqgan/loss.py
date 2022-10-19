@@ -7,6 +7,7 @@ import lpips
 import torch
 from torch import Tensor, nn
 
+from src.data_types import StepType
 from src.models.vit_vqgan.losses.op import conv2d_gradfix
 from src.models.vit_vqgan.losses.style_discriminator import (
     StyleDiscriminator,
@@ -68,7 +69,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
         codebook_loss: torch.FloatTensor,
         inputs: torch.FloatTensor,
         reconstructions: torch.FloatTensor,
-        optimizer_idx: int,
+        step_type: StepType,
         global_step: int,
         batch_idx: int,
         last_layer: Optional[nn.Module] = None,
@@ -77,7 +78,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
         reconstructions = reconstructions.contiguous()
 
         # now the GAN part
-        if optimizer_idx == 0:
+        if step_type == StepType.AUTOENCODER:
             # generator update
             loglaplace_loss = (reconstructions - inputs).abs().mean() * self.loglaplace_weight
             loggaussian_loss = (reconstructions - inputs).pow(2).mean() * self.loggaussian_weight
@@ -102,7 +103,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
 
             return loss
 
-        if optimizer_idx == 1:
+        if step_type == StepType.DISCRIMINATOR:
             # second pass for discriminator update
             disc_factor = 1 if global_step >= self.discriminator_iter_start else 0
             do_r1 = self.training and bool(disc_factor) and batch_idx % self.do_r1_every == 0
