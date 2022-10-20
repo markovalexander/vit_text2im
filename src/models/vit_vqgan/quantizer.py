@@ -8,7 +8,39 @@ from src.data_types import QuantizerOutput
 
 class NormalizeLayer(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
-        return torch.nn.functional.normolize(x, dim=-1)
+        return torch.nn.functional.normalize(x, dim=-1)
+
+
+class PairwiseBatchedDistance(nn.Module):
+    def __init__(self, compute_sqrt: bool = False):
+        """
+        Create a layer that computes pairwise L2 distances between two sets of vectors
+
+        Args:
+            compute_sqrt (bool, optional): Whether to return squared distance or the correct one. Defaults to False.
+        """
+        super().__init__()
+        self.compute_sqrt = compute_sqrt
+
+    def forward(self, x: Tensor, y: Tensor) -> Tensor:
+        """
+
+        Args:
+            x (Tensor): set of vectors of shape [B, D]
+            y (Tensor): set of vectors of shape [N, D]
+
+        Returns:
+            Tensor: (squared) pairwise L2 distances of shape [B, N]
+        """
+        diff = x[:, None, :] - y[None, :, :]  # [B, N, D]
+        diff = diff ** 2
+        diff = torch.sum(diff, dim=-1)
+
+        if self.compute_sqrt:
+            diff = torch.sqrt(diff)
+
+        return diff
+
 
 class BaseQuantizer(nn.Module, ABC):
     def __init__(
@@ -58,19 +90,20 @@ class VectorQuantizer(BaseQuantizer):
         super().__init__(codebook_dim, codebook_size, use_norm, use_straight_through)
         self.beta = beta
 
-        self.distance_calculator = nn.PairwiseDistance(p=2)
+        self.distance_calculator = PairwiseBatchedDistance()
 
 
     def quantize(self, z: Tensor) -> QuantizerOutput:
-        z_reshaped = self.norm(z.view(-1, self.codebook_dim))
-        codebook = self.norm(self.embedding.weight)
+        z_reshaped = self.norm_layer(z.view(-1, self.codebook_dim))
+        codebook = self.norm_layer(self.embedding.weight)
 
         distances = self.distance_calculator(z_reshaped, codebook)
+
         code_indices = torch.argmin(distances, dim=1)
         code_indices = code_indices.view(*z.size()[:-1])
 
         z_q = self.embedding(code_indices).view(z.size())
-        z_qnorm, z_norm = self.norm(z_q), self.norm(z)
+        z_qnorm, z_norm = self.norm_layer(z_q), self.norm_layer(z)
 
         loss = self.beta * torch.mean((z_qnorm.detach() - z_norm)**2) +  \
                torch.mean((z_qnorm - z_norm.detach())**2)

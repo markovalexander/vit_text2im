@@ -1,12 +1,10 @@
-# ------------------------------------------------------------------------------------------------------------
-# Copied from enhancing-transformers by Thuan H. Nguyen (https://github.com/thuanz123/enhancing-transformers)
-# ------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 # Modified from Taming Transformers (https://github.com/CompVis/taming-transformers)
 # Copyright (c) 2020 Patrick Esser and Robin Rombach and Björn Ommer. All Rights Reserved.
-# ------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 # Modified from StyleGAN2-Pytorch (https://github.com/rosinality/stylegan2-pytorch)
 # Copyright (c) 2019 Kim Seonghyeon. All Rights Reserved.
-# ------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
 
 
 from functools import partial
@@ -14,27 +12,30 @@ from math import log2, sqrt
 from typing import Optional, Tuple, Union
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from torch import nn
 
-from src.models.vit_vqgan.losses.op import FusedLeakyReLU, conv2d_gradfix, fused_leaky_relu, upfirdn2d
+from src.models.vit_vqgan.losses.op.conv2d_gradfix import conv2d
+from src.models.vit_vqgan.losses.op.upfirdn2d import upfirdn2d
+
+from .op import FusedLeakyReLU, fused_leaky_relu
 
 
-def hinge_d_loss(logits_fake: torch.Tensor, logits_real: Optional[torch.Tensor] = None) -> torch.Tensor:
+def hinge_d_loss(logits_fake: torch.FloatTensor, logits_real: Optional[torch.FloatTensor] = None) -> torch.FloatTensor:
     loss_fake = - logits_fake.mean() * 2 if logits_real is None else F.relu(1. + logits_fake).mean()
     loss_real = 0 if logits_real is None else F.relu(1. - logits_real).mean()
 
     return 0.5 * (loss_real + loss_fake)
 
 
-def vanilla_d_loss(logits_fake: torch.Tensor, logits_real: Optional[torch.Tensor] = None) -> torch.Tensor:
+def vanilla_d_loss(logits_fake: torch.FloatTensor, logits_real: Optional[torch.FloatTensor] = None) -> torch.FloatTensor:
     loss_fake = F.softplus(-logits_fake).mean() * 2 if logits_real is None else F.softplus(logits_fake).mean()
     loss_real = 0 if logits_real is None else F.softplus(-logits_real).mean()  # pylint: disable=invalid-unary-operand-type
 
     return 0.5 * (loss_real + loss_fake)
 
 
-def least_square_d_loss(logits_fake: torch.Tensor, logits_real: Optional[torch.Tensor] = None) -> torch.Tensor:
+def least_square_d_loss(logits_fake: torch.FloatTensor, logits_real: Optional[torch.FloatTensor] = None) -> torch.FloatTensor:
     loss_fake = logits_fake.pow(2).mean() * 2 if logits_real is None else (1 + logits_fake).pow(2).mean()
     loss_real = 0 if logits_real is None else (1 - logits_real).pow(2).mean()
 
@@ -64,7 +65,7 @@ class ActNorm(nn.Module):
 
         self.register_buffer('initialized', torch.tensor(0, dtype=torch.uint8))
 
-    def initialize(self, input: torch.Tensor) -> None:
+    def initialize(self, input: torch.FloatTensor) -> None:
         with torch.no_grad():
             flatten = input.permute(1, 0, 2, 3).contiguous().view(input.shape[1], -1)
             mean = (
@@ -85,7 +86,7 @@ class ActNorm(nn.Module):
             self.loc.data.copy_(-mean)
             self.scale.data.copy_(1 / (std + 1e-6))
 
-    def forward(self, input: torch.Tensor, reverse: Optional[bool] = False) -> Union[torch.Tensor, Tuple]:
+    def forward(self, input: torch.FloatTensor, reverse: Optional[bool] = False) -> Union[torch.FloatTensor, Tuple]:
         if reverse:
             return self.reverse(input)
         if len(input.shape) == 2:
@@ -113,7 +114,7 @@ class ActNorm(nn.Module):
 
         return h
 
-    def reverse(self, output: torch.Tensor) -> torch.Tensor:
+    def reverse(self, output: torch.FloatTensor) -> torch.FloatTensor:
         if self.training and self.initialized.item() == 0:
             if not self.allow_reverse_init:
                 raise RuntimeError(
@@ -174,7 +175,7 @@ class EqualConv2d(nn.Module):
         self.padding = padding
 
     def forward(self, input):
-        out = conv2d_gradfix.conv2d(
+        out = conv2d(
             input,
             self.weight * self.scale,
             bias=self.bias,
@@ -261,7 +262,6 @@ class StyleBlock(nn.Module):
 
         skip = self.skip(input)
         out = (out + skip) / sqrt(2)
-
         return out
 
 

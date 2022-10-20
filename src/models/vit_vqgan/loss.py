@@ -30,6 +30,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
       use_adaptive_adv: bool = False,
       r1_gamma: float = 10,
       do_r1_every: int = 16,
+      stylegan_size: int = 256,
     ):
         super().__init__()
         assert disc_loss in ["hinge", "vanilla", "least_square"], f"Unknown GAN loss '{disc_loss}'."
@@ -40,7 +41,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
         self.loggaussian_weight = loggaussian_weight
         self.perceptual_weight = perceptual_weight
 
-        self.discriminator = StyleDiscriminator()
+        self.discriminator = StyleDiscriminator(size=stylegan_size)
         self.discriminator_iter_start = disc_start
         if disc_loss == "hinge":
             self.disc_loss = hinge_d_loss
