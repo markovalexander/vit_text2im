@@ -32,6 +32,7 @@ class LossSettings(YamlModel):
     use_adaptive_adv: bool = False
     r1_gamma: float = 10
     do_r1_every: int = 16
+    stylegan_size: int = 256
 
 
 class ModelConfig(YamlModel):
@@ -39,3 +40,9 @@ class ModelConfig(YamlModel):
     decoder_params: ModelSettings
     quantizer_params: VectorQuantizerSettings
     loss_params: LossSettings
+
+    def __post_init__(self):
+        assert self.encoder_params.image_size == self.decoder_params.image_size, \
+            "Encoder end Decoder must work with the same image"
+        assert self.encoder_params.image_size == self.loss_params.stylegan_size, \
+            "StyleDiscriminator image size is not equal to Encoder's"

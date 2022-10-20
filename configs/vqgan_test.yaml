@@ -1,0 +1,23 @@
+encoder_params:
+  image_size: 64
+  patch_size: 8
+  hidden_dim: 128
+  num_layers: 2
+  num_heads: 2
+  mlp_dim: 128
+decoder_params:
+  image_size: 64
+  patch_size: 8
+  hidden_dim: 128
+  num_layers: 2
+  num_heads: 2
+  mlp_dim: 128
+quantizer_params:
+  codebook_dim: 32
+  codebook_size: 64
+loss_params:
+  stylegan_size: 64
+  loglaplace_weight: 0.0
+  loggaussian_weight: 1.0
+  perceptual_weight: 0.1
+  adversarial_weight: 0.1
