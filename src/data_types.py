@@ -14,6 +14,11 @@ class QuantizerOutput:
     loss: Optional[Tensor] = None
     codebook_indices: Optional[Tensor] = None
 
+@dataclass
+class ViTVQGANOutput:
+    encoded_vectors: Tensor
+    quantizer_loss: Tensor
+    reconstructed: Tensor
 
 class StepType(int, Enum):
     AUTOENCODER: int = 0
