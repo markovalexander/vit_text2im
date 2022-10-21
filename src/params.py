@@ -1,6 +1,9 @@
+from pathlib import Path
 from typing import Optional
 
 from pydantic_yaml import YamlModel
+
+from src.utils import root_path
 
 
 class ModelSettings(YamlModel):
@@ -34,15 +37,28 @@ class LossSettings(YamlModel):
     do_r1_every: int = 16
     stylegan_size: int = 256
 
+class DataLoaderParams(YamlModel):
+    root_path: Path
+    batch_size: int
+    num_workers: int = 8
 
 class ModelConfig(YamlModel):
     encoder_params: ModelSettings
     decoder_params: ModelSettings
     quantizer_params: VectorQuantizerSettings
     loss_params: LossSettings
+    data_params: Optional[DataLoaderParams] = None
 
     def __post_init__(self):
         assert self.encoder_params.image_size == self.decoder_params.image_size, \
-            "Encoder end Decoder must work with the same image"
+            "Encoder end Decoder must work with the same image size"
         assert self.encoder_params.image_size == self.loss_params.stylegan_size, \
-            "StyleDiscriminator image size is not equal to Encoder's"
+            "StyleDiscriminator image size is not equal to Encoder's one"
+
+def parse_params_from_config(config_name: str) -> ModelConfig:
+    config_path = root_path() / 'configs' / config_name
+
+    with open(config_path, 'r') as file:
+        config = ModelConfig.parse_raw(file.read())
+
+    return config

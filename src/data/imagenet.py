@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any, Callable, Optional, Tuple, Union
 
 import torch
+from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from torchvision.datasets import ImageNet
 
@@ -45,3 +47,29 @@ class ImageNetValidation(ImageNetBase):
         ])
 
         super().__init__(root=root, split='val', transform=transform)
+
+
+def get_loaders(
+  root_path: Path,
+  batch_size: int,
+  num_workers: int,
+  return_train: bool = True,
+  return_test: bool = True,
+) -> Union[DataLoader, Tuple[DataLoader, DataLoader]]:
+
+    assert return_train or return_test, "should return at least something"
+
+    if return_train:
+        train_dataset = ImageNetTrain(root_path.as_posix())
+        train_loader = DataLoader(train_dataset, batch_size, shuffle=True, num_workers=num_workers)
+
+    if return_test:
+        val_dataset = ImageNetValidation(root_path.as_posix())
+        val_loader = DataLoader(val_dataset, batch_size, shuffle=False, num_workers=num_workers)
+
+    if return_train and return_test:
+        return train_loader, val_loader
+    elif return_train:
+        return train_loader
+    elif return_test:
+        return val_loader

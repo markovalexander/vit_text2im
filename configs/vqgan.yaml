@@ -21,3 +21,8 @@ loss_params:
   loggaussian_weight: 1.0
   perceptual_weight: 0.1
   adversarial_weight: 0.1
+
+data_params:
+  root_path: /datasets/imagenet
+  batch_size: 4
+  num_workers: 8
