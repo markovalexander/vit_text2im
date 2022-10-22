@@ -111,4 +111,4 @@ def train(
         accelerator.end_training()
 
 if __name__ == "__main__":
-    train()
+    train('vqgan_test.yaml')

@@ -5,6 +5,7 @@ encoder_params:
   num_layers: 8
   num_heads: 8
   mlp_dim: 2048
+
 decoder_params:
   image_size: 256
   patch_size: 8
@@ -12,9 +13,11 @@ decoder_params:
   num_layers: 8
   num_heads: 8
   mlp_dim: 2048
+
 quantizer_params:
   codebook_dim: 32
   codebook_size: 8192
+
 loss_params:
   stylegan_size: 256
   loglaplace_weight: 0.0
@@ -23,6 +26,10 @@ loss_params:
   adversarial_weight: 0.1
 
 data_params:
-  root_path: /datasets/imagenet
+  name: "imagenet"
+  root_path: "/tmp"
   batch_size: 4
   num_workers: 8
+
+training_params:
+  report_to_wandb: True
