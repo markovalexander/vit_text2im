@@ -19,6 +19,7 @@ class ViTVQGANOutput:
     encoded_vectors: Tensor
     quantizer_loss: Tensor
     reconstructed: Tensor
+    loss: Optional[Tensor] = None
 
 class StepType(int, Enum):
     AUTOENCODER: int = 0

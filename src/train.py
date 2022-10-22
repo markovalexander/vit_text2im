@@ -10,8 +10,15 @@ from tqdm.auto import tqdm
 from src.data.dummy import DummyDataset
 from src.data.imagenet import get_loaders
 from src.data_types import StepType, ViTVQGANOutput
-from src.models.vit_vqgan import Loss, ViT_VQGAN
+from src.models.vit_vqgan import ViT_VQGAN
 from src.params import parse_params_from_config
+
+
+def fix_ddp_loss(loss, model):
+    params_sum = 0
+    for p in model.parameters():
+        params_sum += torch.sum(p) * 0
+    return loss + params_sum
 
 
 def train(
@@ -20,7 +27,7 @@ def train(
 ):
     params = parse_params_from_config(config)
     accelerator = Accelerator(
-        log_with=params.training_params.report_to,
+        log_with='wandb' if params.training_params.report_to_wandb else None,
         gradient_accumulation_steps=params.training_params.gradient_accumulation_steps,
         mixed_precision=params.training_params.mixed_precision,
         device_placement=True,
@@ -28,11 +35,10 @@ def train(
 
     accelerator.print(pformat(params.dict()))
 
-    model = ViT_VQGAN(params.encoder_params, params.decoder_params, params.quantizer_params)
-    loss = Loss(params.loss_params)
+    model = ViT_VQGAN(params.encoder_params, params.decoder_params, params.quantizer_params, params.loss_params)
 
-    optimizer_model = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
-    optimizer_loss = torch.optim.AdamW(loss.parameters(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
+    optimizer_model = torch.optim.AdamW(model.get_train_params(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
+    optimizer_loss = torch.optim.AdamW(model.get_loss_params(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
 
     if params.data_params.name == 'imagenet':
         train_loader, test_loader = get_loaders(
@@ -46,36 +52,30 @@ def train(
 
     test_images = next(iter(test_loader))['image']
 
-    train_loader, model, optimizer_model, loss, optimizer_loss = accelerator.prepare(
-        train_loader, model, optimizer_model, loss, optimizer_loss,
+    train_loader, model, optimizer_model, optimizer_loss = accelerator.prepare(
+        train_loader, model, optimizer_model, optimizer_loss,
     )
     progress_bar = tqdm(train_loader, disable=not accelerator.is_local_main_process)
 
-    accelerator.init_trackers('vit_vqgan', {'config_name': config, 'lr': lr, 'params': params.dict()})
+    if params.training_params.report_to_wandb:
+        accelerator.init_trackers('vit_vqgan', {'config_name': config, 'lr': lr, 'params': params.dict()})
 
     global_step = 0
     for _ in range(params.training_params.num_epochs):
         model.train()
-        loss.train()
         total_loss = 0
         for step_idx, batch in enumerate(progress_bar):
             with accelerator.accumulate(model), accelerator.autocast():
                 global_step += 1
                 step_type = StepType.from_global_step(global_step)
 
-                accelerator.print('batch_image.size():', batch['image'].size())
-                model_output: ViTVQGANOutput = model(batch['image'])
-                loss_value = loss(
-                    model_output.quantizer_loss,
-                    batch['image'],
-                    model_output.reconstructed,
-                    step_type,
-                    global_step,
-                    step_idx,
-                    model.get_last_layer(),
-                )
-                total_loss += loss_value.detach().float()
-                accelerator.backward(loss_value)
+                model_output: ViTVQGANOutput = model(batch['image'], step_type, global_step, step_idx)
+
+                loss = model_output.loss
+                loss = fix_ddp_loss(loss, model)
+
+                total_loss += loss.detach().float()
+                accelerator.backward(loss)
 
                 if step_type.AUTOENCODER:
                     optimizer_model.step()
@@ -83,25 +83,32 @@ def train(
                 else:
                     optimizer_loss.step()
                     optimizer_loss.zero_grad()
-                accelerator.log({'train_loss': loss_value}, step=global_step)
+
+                if params.training_params.report_to_wandb:
+                    accelerator.log(
+                        {'train_loss': loss, 'quantizer_loss': model_output.quantizer_loss}, step=global_step,
+                    )
 
         model.eval()
-        with accelerator.main_process_first():
-            output = model(test_images)
-            reconstructed = output.reconstructed
+        if params.training_params.report_to_wandb:
+            with accelerator.main_process_first():
+                output = model(test_images)
+                reconstructed = output.reconstructed
 
-            input_image = make_grid(test_images, nrow=2)
-            reconstructed = make_grid(reconstructed, nrow=2)
+                input_image = make_grid(test_images, nrow=2)
+                reconstructed = make_grid(reconstructed, nrow=2)
 
-            input_log = wandb.Image(
-                input_image.detach().cpu().numpy().transpose((1, 2, 0)), caption='input image',
-            )
-            reconstructed_log = wandb.Image(
-                reconstructed.detach().cpu().numpy().transpose((1, 2, 0)), caption='reconstructed',
-            )
-        accelerator.log({'input image': input_log, 'reconstructed image': reconstructed_log})
+                input_log = wandb.Image(
+                    input_image.detach().cpu().numpy().transpose((1, 2, 0)), caption='input image',
+                )
+                reconstructed_log = wandb.Image(
+                    reconstructed.detach().cpu().numpy().transpose((1, 2, 0)), caption='reconstructed',
+                )
 
-    accelerator.end_training()
+            accelerator.log({'input image': input_log, 'reconstructed image': reconstructed_log})
+
+    if params.training_params.report_to_wandb:
+        accelerator.end_training()
 
 if __name__ == "__main__":
     train()

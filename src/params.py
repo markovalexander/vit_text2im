@@ -45,7 +45,7 @@ class DataLoaderParams(YamlModel):
 
 class TrainingParams(YamlModel):
     num_epochs: int = 1
-    report_to: Optional[str] = None
+    report_to_wandb: bool = False
     gradient_accumulation_steps: int = 1
     mixed_precision: str = 'no'
 

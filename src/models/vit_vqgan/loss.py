@@ -8,7 +8,7 @@ import torch
 from torch import Tensor, nn
 
 from src.data_types import StepType
-from src.models.vit_vqgan.losses.op import conv2d_gradfix
+from src.models.vit_vqgan.losses.op import no_weight_gradients
 from src.models.vit_vqgan.losses.style_discriminator import (
     StyleDiscriminator,
     hinge_d_loss,
@@ -114,7 +114,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
 
             d_loss = disc_factor * self.disc_loss(logits_fake, logits_real)
             if do_r1:
-                with conv2d_gradfix.no_weight_gradients():
+                with no_weight_gradients():
                     gradients, = torch.autograd.grad(outputs=logits_real.sum(), inputs=inputs, create_graph=True)
 
                 gradients_norm = gradients.square().sum([1,2,3]).mean()
