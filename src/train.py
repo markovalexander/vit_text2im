@@ -91,3 +91,6 @@ def train(
         accelerator.log({'input image': input_log, 'reconstructed image': reconstructed_log})
 
     accelerator.end_training()
+
+if __name__ == "__main__":
+    train()
