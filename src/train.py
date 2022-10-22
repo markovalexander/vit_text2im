@@ -1,21 +1,22 @@
+from pprint import pformat
+
 import torch
-import typer
 import wandb
 from accelerate import Accelerator
+from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
 from tqdm.auto import tqdm
 
+from src.data.dummy import DummyDataset
 from src.data.imagenet import get_loaders
 from src.data_types import StepType, ViTVQGANOutput
 from src.models.vit_vqgan import Loss, ViT_VQGAN
 from src.params import parse_params_from_config
 
-app = typer.Typer()
 
-@app.command('train')
 def train(
-  config: str = typer.Argument('vqgan.yaml', help="Name of .yaml file in configs folder"),
-  lr: float = typer.Argument(4.5e-6, help="Base learning rate"),
+  config: str = 'vqgan.yaml',
+  lr: float = 4.5e-6,
 ):
     params = parse_params_from_config(config)
     accelerator = Accelerator(
@@ -25,15 +26,24 @@ def train(
         device_placement=True,
     )
 
+    accelerator.print(pformat(params.dict()))
+
     model = ViT_VQGAN(params.encoder_params, params.decoder_params, params.quantizer_params)
     loss = Loss(params.loss_params)
 
     optimizer_model = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
     optimizer_loss = torch.optim.AdamW(loss.parameters(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
 
-    train_loader, test_loader = get_loaders(
-        params.data_params.root_path, params.data_params.batch_size, params.data_params.num_workers,
-    )
+    if params.data_params.name == 'imagenet':
+        train_loader, test_loader = get_loaders(
+            params.data_params.root_path,
+            params.data_params.batch_size,
+            params.data_params.num_workers,
+        )
+    else:
+        train_loader = DataLoader(DummyDataset(), shuffle=True, batch_size=params.data_params.batch_size)
+        test_loader = DataLoader(DummyDataset(), batch_size=params.data_params.batch_size)
+
     test_images = next(iter(test_loader))['image']
 
     train_loader, model, optimizer_model, loss, optimizer_loss = accelerator.prepare(
@@ -44,7 +54,7 @@ def train(
     accelerator.init_trackers('vit_vqgan', {'config_name': config, 'lr': lr, 'params': params.dict()})
 
     global_step = 0
-    for epoch in range(params.training_params.num_epochs):
+    for _ in range(params.training_params.num_epochs):
         model.train()
         loss.train()
         total_loss = 0
@@ -53,6 +63,7 @@ def train(
                 global_step += 1
                 step_type = StepType.from_global_step(global_step)
 
+                accelerator.print('batch_image.size():', batch['image'].size())
                 model_output: ViTVQGANOutput = model(batch['image'])
                 loss_value = loss(
                     model_output.quantizer_loss,

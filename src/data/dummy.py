@@ -26,6 +26,6 @@ class DummyDataset(Dataset):
 
     def __getitem__(self, index: int):
         if self.n_classes:
-            return self.data[index], self.labels[index]
+            return {'image': self.data[index], 'label': self.labels[index]}
 
-        return self.data[index]
+        return {'image': self.data[index]}

@@ -42,6 +42,8 @@ class ViT_VQGAN(nn.Module):
         x = self.post_quant(z)
         return self.decoder(x)
 
+    def get_last_layer(self) -> TLayer:
+        return self.decoder.get_last_layer()
 
 class LossNetwork(nn.Module):
     def __init__(self, loss_params: LossSettings):

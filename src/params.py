@@ -39,12 +39,13 @@ class LossSettings(YamlModel):
 
 class DataLoaderParams(YamlModel):
     root_path: Path
+    name: str
     batch_size: int
     num_workers: int = 8
 
 class TrainingParams(YamlModel):
     num_epochs: int = 1
-    report_to: str = 'wandb'
+    report_to: Optional[str] = None
     gradient_accumulation_steps: int = 1
     mixed_precision: str = 'no'
 
@@ -53,7 +54,7 @@ class ModelConfig(YamlModel):
     decoder_params: ModelSettings
     quantizer_params: VectorQuantizerSettings
     loss_params: LossSettings
-    data_params: Optional[DataLoaderParams] = None
+    data_params: DataLoaderParams
     training_params: TrainingParams = TrainingParams()
 
     def __post_init__(self):
