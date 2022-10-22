@@ -24,7 +24,7 @@ class StepType(int, Enum):
     AUTOENCODER: int = 0
     DISCRIMINATOR: int = 1
 
-    def __str__(self):
+    def __int__(self):
         return self.value
 
     @classmethod

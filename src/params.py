@@ -42,12 +42,19 @@ class DataLoaderParams(YamlModel):
     batch_size: int
     num_workers: int = 8
 
+class TrainingParams(YamlModel):
+    num_epochs: int = 1
+    report_to: str = 'wandb'
+    gradient_accumulation_steps: int = 1
+    mixed_precision: str = 'no'
+
 class ModelConfig(YamlModel):
     encoder_params: ModelSettings
     decoder_params: ModelSettings
     quantizer_params: VectorQuantizerSettings
     loss_params: LossSettings
     data_params: Optional[DataLoaderParams] = None
+    training_params: TrainingParams = TrainingParams()
 
     def __post_init__(self):
         assert self.encoder_params.image_size == self.decoder_params.image_size, \
