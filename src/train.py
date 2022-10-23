@@ -1,12 +1,12 @@
 from pprint import pformat
 
 import torch
-import wandb
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
 from tqdm.auto import tqdm
 
+import wandb
 from src.data.dummy import DummyDataset
 from src.data.imagenet import get_loaders
 from src.data_types import StepType, ViTVQGANOutput
@@ -40,31 +40,34 @@ def train(
     optimizer_model = torch.optim.AdamW(model.get_train_params(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
     optimizer_loss = torch.optim.AdamW(model.get_loss_params(), lr=lr, betas=(0.9, 0.99), weight_decay=1e-4)
 
-    if params.data_params.name == 'imagenet':
-        train_loader, test_loader = get_loaders(
-            params.data_params.root_path,
-            params.data_params.batch_size,
-            params.data_params.num_workers,
-        )
-    else:
-        train_loader = DataLoader(DummyDataset(), shuffle=True, batch_size=params.data_params.batch_size)
-        test_loader = DataLoader(DummyDataset(), batch_size=params.data_params.batch_size)
+    with accelerator.main_process_first():
+        if params.data_params.name == 'imagenet':
+            train_loader, test_loader = get_loaders(
+                params.data_params.root_path,
+                params.data_params.batch_size,
+                params.data_params.num_workers,
+            )
+        else:
+            train_loader = DataLoader(DummyDataset(), shuffle=True, batch_size=params.data_params.batch_size)
+            test_loader = DataLoader(DummyDataset(), batch_size=params.data_params.batch_size)
 
-    test_images = next(iter(test_loader))['image']
+        test_images = next(iter(test_loader))['image']
 
     train_loader, model, optimizer_model, optimizer_loss = accelerator.prepare(
         train_loader, model, optimizer_model, optimizer_loss,
     )
-    progress_bar = tqdm(train_loader, disable=not accelerator.is_local_main_process)
 
     if params.training_params.report_to_wandb:
         accelerator.init_trackers('vit_vqgan', {'config_name': config, 'lr': lr, 'params': params.dict()})
 
     global_step = 0
-    for _ in range(params.training_params.num_epochs):
+    num_epochs = params.training_params.num_epochs
+    progress_bar = tqdm(total=len(train_loader) * num_epochs, disable=not accelerator.is_local_main_process)
+
+    for _ in range(num_epochs):
         model.train()
         total_loss = 0
-        for step_idx, batch in enumerate(progress_bar):
+        for step_idx, batch in enumerate(train_loader):
             with accelerator.accumulate(model), accelerator.autocast():
                 global_step += 1
                 step_type = StepType.from_global_step(global_step)
@@ -88,6 +91,7 @@ def train(
                     accelerator.log(
                         {'train_loss': loss, 'quantizer_loss': model_output.quantizer_loss}, step=global_step,
                     )
+            progress_bar.update(1)
 
         model.eval()
         if params.training_params.report_to_wandb:
@@ -111,4 +115,4 @@ def train(
         accelerator.end_training()
 
 if __name__ == "__main__":
-    train('vqgan_test.yaml')
+    train('vqgan.yaml')

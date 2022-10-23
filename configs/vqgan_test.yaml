@@ -30,3 +30,4 @@ data_params:
 
 training_params:
   report_to_wandb: True
+  num_epochs: 100

@@ -27,7 +27,7 @@ loss_params:
 
 data_params:
   name: "imagenet"
-  root_path: "/tmp"
+  root_path: "/data"
   batch_size: 4
   num_workers: 8
 

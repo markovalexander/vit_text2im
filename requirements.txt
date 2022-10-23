@@ -16,3 +16,9 @@ nltk
 einops
 lpips
 pydantic_yaml
+pylint
+black
+pytest
+flake8
+mypy
+unify
