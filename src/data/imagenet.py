@@ -33,7 +33,7 @@ def get_loaders(
 
     if return_test:
         val_dataset = ImageFolder((root_path / 'val').as_posix(), transform=test_transforms)
-        val_loader = DataLoader(val_dataset, batch_size, shuffle=False, num_workers=num_workers)
+        val_loader = DataLoader(val_dataset, 4, shuffle=False, num_workers=num_workers)
 
     if return_train and return_test:
         return train_loader, val_loader

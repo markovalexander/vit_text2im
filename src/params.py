@@ -50,6 +50,8 @@ class TrainingParams(YamlModel):
     mixed_precision: str = 'no'
     log_steps: int = 100
     eval_steps: int = 500
+    save_every: int = 5000
+    save_dir: Path = 'checkpoints'
 
 class ModelConfig(YamlModel):
     encoder_params: ModelSettings
