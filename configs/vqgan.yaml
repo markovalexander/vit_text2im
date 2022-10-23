@@ -33,3 +33,5 @@ data_params:
 
 training_params:
   report_to_wandb: True
+  log_steps: 100
+  eval_steps: 500

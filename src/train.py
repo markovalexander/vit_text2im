@@ -88,13 +88,14 @@ def train(
                     optimizer_loss.step()
                     optimizer_loss.zero_grad()
 
-                if params.training_params.report_to_wandb:
+                if params.training_params.report_to_wandb and \
+                    (global_step + 1) % params.training_params.log_steps == 0:
                     accelerator.log(
                         {'train_loss': loss, 'quantizer_loss': model_output.quantizer_loss}, step=global_step,
                     )
             progress_bar.update(1)
 
-            if (global_step + 1) % params.training_params.log_steps == 0:
+            if (global_step + 1) % params.training_params.eval_steps == 0:
                 model.eval()
                 if params.training_params.report_to_wandb:
                     with accelerator.main_process_first():
