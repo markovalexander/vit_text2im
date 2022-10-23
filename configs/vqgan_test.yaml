@@ -27,3 +27,6 @@ data_params:
   root_path: "/tmp"
   batch_size: 4
   num_workers: 8
+
+training_params:
+  report_to_wandb: True

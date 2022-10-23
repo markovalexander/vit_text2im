@@ -15,7 +15,9 @@ WORKDIR /workspace
 RUN pip install triton==1.0.0
 
 RUN DS_BUILD_QUANTIZER=1 DS_BUILD_TRANSFORMER_INFERENCE=1 DS_BUILD_TRANSFORMER=1 DS_BUILD_CPU_ADAM=1 DS_BUILD_FUSED_ADAM=1 DS_BUILD_FUSED_LAMB=1 DS_BUILD_SPARSE_ATTN=1 DS_BUILD_UTILS=1 DS_BUILD_AIO=1  pip install deepspeed --global-option="build_ext" --global-option="-j8"
-RUN pip install transformers datasets tokenizers pydantic pandas boto3 wandb numpy scikit-learn jupyter ipython evaluate accelerate sacrebleu nltk
+COPY requirements.txt requirements.txt
+
+RUN pip install -r requirements.txt
 
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('wordnet_ic'); nltk.download('sentiwordnet'); nltk.download('omw-1.4')"
 CMD sleep infinity
