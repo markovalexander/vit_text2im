@@ -48,6 +48,7 @@ class TrainingParams(YamlModel):
     report_to_wandb: bool = False
     gradient_accumulation_steps: int = 1
     mixed_precision: str = 'no'
+    log_steps: int = 500
 
 class ModelConfig(YamlModel):
     encoder_params: ModelSettings

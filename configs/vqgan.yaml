@@ -27,8 +27,8 @@ loss_params:
 
 data_params:
   name: "imagenet"
-  root_path: "/data"
-  batch_size: 4
+  root_path: "/mnt/ssd/amarkov/ImageNet"
+  batch_size: 8
   num_workers: 8
 
 training_params:

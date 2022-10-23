@@ -51,7 +51,7 @@ def train(
             train_loader = DataLoader(DummyDataset(), shuffle=True, batch_size=params.data_params.batch_size)
             test_loader = DataLoader(DummyDataset(), batch_size=params.data_params.batch_size)
 
-        test_images = next(iter(test_loader))['image']
+        test_images = next(iter(test_loader))[0]
 
     train_loader, model, optimizer_model, optimizer_loss = accelerator.prepare(
         train_loader, model, optimizer_model, optimizer_loss,
@@ -69,10 +69,11 @@ def train(
         total_loss = 0
         for step_idx, batch in enumerate(train_loader):
             with accelerator.accumulate(model), accelerator.autocast():
+                images = batch[0]
                 global_step += 1
                 step_type = StepType.from_global_step(global_step)
 
-                model_output: ViTVQGANOutput = model(batch['image'], step_type, global_step, step_idx)
+                model_output: ViTVQGANOutput = model(images, step_type, global_step, step_idx)
 
                 loss = model_output.loss
                 loss = fix_ddp_loss(loss, model)
@@ -93,23 +94,24 @@ def train(
                     )
             progress_bar.update(1)
 
-        model.eval()
-        if params.training_params.report_to_wandb:
-            with accelerator.main_process_first():
-                output = model(test_images)
-                reconstructed = output.reconstructed
+            if (global_step + 1) % params.training_params.log_steps == 0:
+                model.eval()
+                if params.training_params.report_to_wandb:
+                    with accelerator.main_process_first():
+                        output = model(test_images)
+                        reconstructed = output.reconstructed
 
-                input_image = make_grid(test_images, nrow=2)
-                reconstructed = make_grid(reconstructed, nrow=2)
+                        input_image = make_grid(test_images, nrow=2)
+                        reconstructed = make_grid(reconstructed, nrow=2)
 
-                input_log = wandb.Image(
-                    input_image.detach().cpu().numpy().transpose((1, 2, 0)), caption='input image',
-                )
-                reconstructed_log = wandb.Image(
-                    reconstructed.detach().cpu().numpy().transpose((1, 2, 0)), caption='reconstructed',
-                )
+                        input_log = wandb.Image(
+                            input_image.detach().cpu().numpy().transpose((1, 2, 0)), caption='input image',
+                        )
+                        reconstructed_log = wandb.Image(
+                            reconstructed.detach().cpu().numpy().transpose((1, 2, 0)), caption='reconstructed',
+                        )
 
-            accelerator.log({'input image': input_log, 'reconstructed image': reconstructed_log})
+                    accelerator.log({'input image': input_log, 'reconstructed image': reconstructed_log})
 
     if params.training_params.report_to_wandb:
         accelerator.end_training()
