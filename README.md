@@ -1,3 +1,3 @@
 # vit_text2im
 
-VIT_VQGAN with accelerate library
+Currently only **VIT-VQGAN** implementation based on `accelerate` library
