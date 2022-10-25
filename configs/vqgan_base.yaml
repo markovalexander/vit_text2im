@@ -27,7 +27,7 @@ loss_params:
 
 data_params:
   name: "imagenet"
-  root_path: "/mnt/ssd/amarkov/ImageNet"
+  root_path: "./data/imagenet"
   batch_size: 4
   num_workers: 8
 
@@ -37,4 +37,4 @@ training_params:
   log_steps: 100
   eval_steps: 500
   save_every: 5000
-  save_dir: "/mnt/ssd/amarkov/vit_vqgan_base"
+  save_dir: ".logs"

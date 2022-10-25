@@ -50,7 +50,8 @@ def train(
         train_loader = DataLoader(DummyDataset(), shuffle=True, batch_size=params.data_params.batch_size)
         test_loader = DataLoader(DummyDataset(), batch_size=params.data_params.batch_size)
 
-    test_images = next(iter(test_loader))[0]
+    test_images = next(iter(test_loader))[0].to(accelerator.device)
+    n_test_images = len(test_images)
 
     train_loader, model, optimizer_model, optimizer_loss = accelerator.prepare(
         train_loader, model, optimizer_model, optimizer_loss,
@@ -58,6 +59,15 @@ def train(
 
     if params.training_params.report_to_wandb:
         accelerator.init_trackers('vit_vqgan_base', {'config_name': config, 'lr': lr, 'params': params.dict()})
+
+    test_images = accelerator.gather(test_images)[:n_test_images]
+    with accelerator.main_process_first():
+        input_image = make_grid(test_images, nrow=2)
+
+        input_log = wandb.Image(
+            input_image.detach().cpu().numpy().transpose((1, 2, 0)), caption='input image',
+        )
+        accelerator.log({'input image': input_log})
 
     global_step = 0
     num_epochs = params.training_params.num_epochs
@@ -95,23 +105,20 @@ def train(
             progress_bar.update(1)
             if global_step % params.training_params.save_every == 0:
                 accelerator.save_state(params.training_params.save_dir.as_posix())
-            # if global_step % params.training_params.eval_steps == 0 and params.training_params.report_to_wandb:
-            #     model.eval()
-            #     with accelerator.main_process_first():
-            #         with torch.inference_mode():
-            #             reconstructed = model(test_images).reconstructed
 
-            #         input_image = make_grid(test_images, nrow=2)
-            #         reconstructed = make_grid(reconstructed, nrow=2)
+            if global_step % params.training_params.eval_steps == 0 and params.training_params.report_to_wandb:
+                model.eval()
+                with torch.inference_mode():
+                    reconstructed = model(test_images).reconstructed
 
-            #         input_log = wandb.Image(
-            #             input_image.detach().cpu().numpy().transpose((1, 2, 0)), caption='input image',
-            #         )
-            #         reconstructed_log = wandb.Image(
-            #             reconstructed.detach().cpu().numpy().transpose((1, 2, 0)), caption='reconstructed',
-            #         )
+                reconsrtucted_images_gathered = accelerator.gather(reconstructed)
+                reconsrtucted_images_gathered = reconsrtucted_images_gathered[:n_test_images, ...]
 
-            #         wandb.log({'input image': input_log, 'reconstructed image': reconstructed_log})
+                reconstructed = make_grid(reconsrtucted_images_gathered, nrow=2)
+                reconstructed_log = wandb.Image(
+                    reconstructed.detach().cpu().numpy().transpose((1, 2, 0)), caption='reconstructed',
+                )
+                accelerator.log({'reconstructed image': reconstructed_log})
 
     if params.training_params.report_to_wandb:
         accelerator.end_training()
