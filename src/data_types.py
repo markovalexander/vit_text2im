@@ -16,20 +16,19 @@ class QuantizerOutput:
 
 @dataclass
 class ViTVQGANOutput:
-    encoded_vectors: Tensor
-    quantizer_loss: Tensor
+    quantizer_output: QuantizerOutput
+    loss: Tensor
     reconstructed: Tensor
-    loss: Optional[Tensor] = None
 
 class StepType(int, Enum):
-    AUTOENCODER: int = 0
-    DISCRIMINATOR: int = 1
+    DISCRIMINATOR = 0
+    MODEL = 1
 
     def __int__(self):
         return self.value
 
     @classmethod
-    def from_global_step(cls, global_step: int) -> 'StepType':
-        if global_step % 2 == 0:
-            return StepType.AUTOENCODER
+    def from_global_step(cls, step: int):
+        if step % 2:
+            return StepType.MODEL
         return StepType.DISCRIMINATOR

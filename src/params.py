@@ -1,19 +1,25 @@
 from pathlib import Path
-from typing import Optional
+from typing import Tuple
 
 from pydantic_yaml import YamlModel
 
-from src.utils import root_path
+from src import root_path
 
 
 class ModelSettings(YamlModel):
-    image_size: Optional[int] = None
-    patch_size: Optional[int] = None
-    hidden_dim: Optional[int] = None
-    num_layers: Optional[int] = None
-    num_heads: Optional[int] = None
-    mlp_dim: Optional[int] = None
-    channels: Optional[int] = 3
+    hidden_dim: int
+    input_channels: int = 3
+    image_size: int = 32
+    num_layers: int = 4
+    patch_size: int= 16
+    heads_channels: int = 512
+    num_heads: int = 8
+    fc_multiplier: int = 4
+
+
+class ViTSettings(YamlModel):
+    encoder: ModelSettings
+    decoder: ModelSettings
 
 
 class VectorQuantizerSettings(YamlModel):
@@ -25,23 +31,24 @@ class VectorQuantizerSettings(YamlModel):
 
 
 class LossSettings(YamlModel):
-    disc_start: int = 0
-    disc_loss: str = 'vanilla'
+    discr_layers: int = 4
+    channels: int = 3
+    groups: int = 8
+    cross_embed_kernel_sizes: Tuple[int] = (3, 7, 15)
     codebook_weight: float = 1.0
-    loglaplace_weight: float = 1.0
-    loggaussian_weight: float = 1.0
     perceptual_weight: float = 1.0
-    adversarial_weight: float = 1.0
-    use_adaptive_adv: bool = False
-    r1_gamma: float = 10
-    do_r1_every: int = 16
-    stylegan_size: int = 256
+    use_grad_penalty: bool = False
+    gp_weight: float = 10.0
+
 
 class DataLoaderParams(YamlModel):
     root_path: Path
     name: str
     batch_size: int
     num_workers: int = 8
+
+    def __post__init__(self):
+        self.name = self.name.lower()
 
 class TrainingParams(YamlModel):
     num_epochs: int = 1
@@ -54,18 +61,11 @@ class TrainingParams(YamlModel):
     save_dir: Path = 'checkpoints'
 
 class ModelConfig(YamlModel):
-    encoder_params: ModelSettings
-    decoder_params: ModelSettings
+    vit_params: ViTSettings
     quantizer_params: VectorQuantizerSettings
     loss_params: LossSettings
-    data_params: DataLoaderParams
     training_params: TrainingParams = TrainingParams()
-
-    def __post_init__(self):
-        assert self.encoder_params.image_size == self.decoder_params.image_size, \
-            "Encoder end Decoder must work with the same image size"
-        assert self.encoder_params.image_size == self.loss_params.stylegan_size, \
-            "StyleDiscriminator image size is not equal to Encoder's one"
+    data_params: DataLoaderParams
 
 def parse_params_from_config(config_name: str) -> ModelConfig:
     config_path = root_path() / 'configs' / config_name
