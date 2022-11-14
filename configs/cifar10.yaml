@@ -1,0 +1,44 @@
+vit_params:
+  encoder:
+    hidden_dim: 256
+    patch_size: 8
+    heads_channels: 512
+    num_layers: 4
+    num_heads: 8
+    fc_multiplier: 6
+    input_channels: 3
+
+  decoder:
+    hidden_dim: 256
+    patch_size: 8
+    heads_channels: 512
+    num_layers: 4
+    num_heads: 8
+    fc_multiplier: 6
+    input_channels: 3
+
+quantizer_params:
+  codebook_dim: 256
+  codebook_size: 4096
+
+loss_params:
+  discr_layers: 4
+  perceptual_weight: 1.0
+  codebook_weight: 1.0
+  use_grad_penalty: True
+  gp_weight: 10.0
+
+data_params:
+  name: "cifar100"
+  root_path: "/mnt/ssd/amarkov/cifar100"
+  batch_size: 64
+  num_workers: 6
+
+training_params:
+  report_to_wandb: True
+  gradient_accumulation_steps: 1
+  log_steps: 50
+  eval_steps: 500
+  save_every: 600
+  save_dir: ".logs"
+  num_epochs: 20
