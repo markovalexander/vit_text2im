@@ -18,7 +18,8 @@ vit_params:
     input_channels: 3
 
 quantizer_params:
-  codebook_dim: 256
+  input_dim: 256
+  codebook_dim: 16
   codebook_size: 4096
 
 loss_params:

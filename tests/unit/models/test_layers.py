@@ -10,21 +10,20 @@ def images_batch():
 
 
 def test_pairwise_batched_distance_layer():
-    a = torch.randn(3, 5, 24)
+    a = torch.randn(3, 24)
     b = torch.randn(4, 24)
 
     distance_layer = PairwiseBatchedDistanceLayer()
     distances = distance_layer(a, b)
 
     assert torch.isfinite(distances).all()
-    assert distances.size() == torch.Size([3, 5, 4])
+    assert distances.size() == torch.Size([3, 4])
 
-    expected_distances = torch.empty(3, 5, 4)
+    expected_distances = torch.empty(3, 4)
 
-    for i, a_mat in enumerate(a):
-        for j, a_vec in enumerate(a_mat):
-            for k, b_vec in enumerate(b):
-                expected_distances[i, j, k] = torch.sum((a_vec - b_vec) ** 2)
+    for i, a_vec in enumerate(a):
+        for k, b_vec in enumerate(b):
+            expected_distances[i, k] = torch.sum((a_vec - b_vec) ** 2)
 
     assert torch.isclose(expected_distances, distances).all()
 

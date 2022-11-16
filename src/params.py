@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 from pydantic_yaml import YamlModel
 
@@ -23,12 +23,16 @@ class ViTSettings(YamlModel):
 
 
 class VectorQuantizerSettings(YamlModel):
-    codebook_dim: int
+    input_dim: int
+    codebook_dim: Optional[int]
     codebook_size: int
     use_norm: bool = True
     use_straight_through: bool = True
+    encode_images: bool = True
     beta: float = 0.25
 
+    def __post_init__(self):
+        self.codebook_dim = self.codebook_dim or self.input_dim
 
 class LossSettings(YamlModel):
     discr_layers: int = 4

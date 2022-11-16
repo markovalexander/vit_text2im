@@ -63,7 +63,7 @@ class NormalizeLayer(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         return torch.nn.functional.normalize(x, dim=-1)
 
-class PairwiseBatchedDistance(nn.Module):
+class PairwiseBatchedDistanceLayer(nn.Module):
     def __init__(self, compute_sqrt: bool = False):
         """
         Create a layer that computes pairwise L2 distances between two sets of vectors
@@ -223,10 +223,7 @@ class Attention2d(nn.Module):
         image_size = x.size(-1)
 
         x = self.norm(x)
-        print('after_norm:', x[0, 0, 0, 0:4])
-
         qkv = self.to_qkv(x).chunk(3, dim=1)
-        print('after q, k, v', qkv[0][0, 0, 0, 0:4])
 
         qkv = (inner_conv(t) for t, inner_conv in zip(qkv, self.inner_convs))
 
