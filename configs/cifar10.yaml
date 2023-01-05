@@ -32,14 +32,15 @@ loss_params:
 data_params:
   name: "cifar100"
   root_path: "/mnt/ssd/amarkov/cifar100"
-  batch_size: 64
-  num_workers: 6
+  batch_size: 32
+  num_workers: 16
 
 training_params:
+  num_train_steps: 100000
+  weight_decay: 0.01
   report_to_wandb: True
   gradient_accumulation_steps: 1
   log_steps: 50
   eval_steps: 500
-  save_every: 600
+  save_every: 1000
   save_dir: ".logs"
-  num_epochs: 20

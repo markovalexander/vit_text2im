@@ -110,7 +110,12 @@ class ViTVQGAN(nn.Module):
 
         self.loss_net = LossNetwork(dims=dims, **loss_params.dict())
 
-    def forward(self, images: Tensor, step: Optional[StepType] = None) -> ViTVQGANOutput:
+    def forward(
+      self,
+      images: Tensor,
+      step: Optional[StepType] = None,
+      apply_grad_penalty: bool = False,
+    ) -> ViTVQGANOutput:
         encoded = self.encoder(images)
         quantized: QuantizerOutput = self.quantizer(encoded)
 
@@ -119,7 +124,7 @@ class ViTVQGAN(nn.Module):
         loss = None
         if step is not None:
             loss = self.loss_net(
-                images, quantized.loss, reconstructed, step, self.decoder.last_layer(),
+                images, quantized.loss, reconstructed, step, self.decoder.last_layer(), apply_grad_penalty,
             )
         return ViTVQGANOutput(quantizer_output=quantized, loss=loss, reconstructed=reconstructed)
 
@@ -127,6 +132,7 @@ class ViTVQGAN(nn.Module):
         params = chain(
             self.encoder.parameters(),
             self.decoder.parameters(),
+            self.quantizer.parameters(),
         )
         return params
 

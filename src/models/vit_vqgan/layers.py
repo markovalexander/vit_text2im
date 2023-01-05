@@ -148,8 +148,9 @@ class LayerNormScaleOnlyLayer(nn.Module):
     def __init__(self, hidden_dim: int):
         super().__init__()
         self.dim = hidden_dim
-        self.scale = nn.Parameter(torch.ones(1, hidden_dim, 1, 1))
-        self.eps = 1e-5
+
+        self.register_buffer('scale', torch.ones(1, hidden_dim, 1, 1))
+        self.register_buffer('eps', torch.FloatTensor([1e-5]))
 
     def forward(self, x: Tensor) -> Tensor:
         var = torch.var(x, dim=1, unbiased = False, keepdim = True)

@@ -65,7 +65,6 @@ class LossNetwork(nn.Module):
       cross_embed_kernel_sizes: Tuple[int] = (3, 7, 15),
       codebook_weight: float = 1.0,
       perceptual_weight: float = 1.0,
-      use_grad_penalty: bool = False,
       gp_weight: float = 10.0,
       last_discr_kernel_size: int = 1,
       **kwargs,
@@ -81,7 +80,6 @@ class LossNetwork(nn.Module):
 
         self.codebook_weight = codebook_weight
         self.perceptual_weight = perceptual_weight
-        self.use_grad_penalty = use_grad_penalty
         self.gp_weight = gp_weight
 
     def forward(
@@ -91,20 +89,21 @@ class LossNetwork(nn.Module):
       reconstructed_imgs: Tensor,
       step: StepType,
       last_decoder_layer_weights: Tensor,
+      apply_grad_penalty: bool = False,
     ) -> Tensor:
 
-        if step.DISCRIMINATOR:
+        if step == StepType.DISCRIMINATOR:
             reconstructed_imgs.detach_()
             imgs.requires_grad_()
 
             reconstructed_discr_logits = self.discriminator(reconstructed_imgs)
             real_discr_logits = self.discriminator(imgs)
 
-            discr_loss = self.hinge_loss(real_discr_logits, reconstructed_discr_logits)
-            if self.use_grad_penalty:
-                loss = self.add_grad_penalty(discr_loss)
+            loss = self.discr_loss(real_discr_logits, reconstructed_discr_logits)
+            if apply_grad_penalty:
+                loss = self.add_grad_penalty(loss)
 
-        if step.MODEL:
+        elif step == StepType.MODEL:
             reconstruction_loss = self.reconstruction_loss(imgs, reconstructed_imgs)
             perceptual_loss = self.perceptual_loss(2 * imgs - 1, 2 * reconstructed_imgs - 1).mean()
             gen_loss = self.gen_loss(self.discriminator(reconstructed_imgs))
@@ -115,14 +114,16 @@ class LossNetwork(nn.Module):
             loss = loss + self.perceptual_weight * perceptual_loss
             loss = loss + self.codebook_weight * quantizer_loss
             loss = loss + adaptive_weight * gen_loss
+        else:
+            raise ValueError('strange StepType')
 
         return loss
 
     def discr_loss(self, real: Tensor, fake: Tensor) -> Tensor:
-        return torch.mean(torch.relu(1 + fake) + torch.relu(1 - real))
+        return torch.mean(-torch.log(1 - torch.sigmoid(fake) + 1e-10) - torch.log(torch.sigmoid(real) + 1e-10))
 
     def gen_loss(self, img: Tensor) -> Tensor:
-        return torch.mean(-img)
+        return torch.mean(-torch.log(1e-10 + torch.sigmoid(img)))
 
     def calculate_adaptive_weight(
       self,

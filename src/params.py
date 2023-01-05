@@ -41,7 +41,6 @@ class LossSettings(YamlModel):
     cross_embed_kernel_sizes: Tuple[int] = (3, 7, 15)
     codebook_weight: float = 1.0
     perceptual_weight: float = 1.0
-    use_grad_penalty: bool = False
     gp_weight: float = 10.0
 
 
@@ -55,14 +54,26 @@ class DataLoaderParams(YamlModel):
         self.name = self.name.lower()
 
 class TrainingParams(YamlModel):
-    num_epochs: int = 1
-    report_to_wandb: bool = False
+    num_train_steps: int = 100000
+
+    learning_rate: float = 3e-4
+    weight_decay: float = 0.
+
     gradient_accumulation_steps: int = 1
     mixed_precision: str = 'no'
+    gradient_penalty_steps: int = 4
+
     log_steps: int = 100
     eval_steps: int = 500
     save_every: int = 5000
     save_dir: Path = 'checkpoints'
+
+    report_to_wandb: bool = False
+
+    ema_warmup: int = 500
+    ema_steps: int = 10
+
+
 
 class ModelConfig(YamlModel):
     vit_params: ViTSettings
