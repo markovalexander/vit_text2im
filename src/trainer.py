@@ -25,10 +25,12 @@ class Trainer:
         model: ViTVQGAN,
         data_args: DataLoaderParams,
         training_args: TrainingParams,
+        generator_steps_before_discriminator: int = 4,
     ) -> None:
 
         self.data_args = data_args
         self.training_args = training_args
+        self.generator_steps_before_discriminator = generator_steps_before_discriminator
 
         vae_optimizer = self._build_optimizer(
             model.get_model_params(),
@@ -70,7 +72,6 @@ class Trainer:
             total=self.training_args.num_train_steps * self.training_args.gradient_accumulation_steps,
             disable=not self.accelerator.is_local_main_process,
         )
-
         for global_step in range(1, self.training_args.num_train_steps + 1):
             self._train_step(global_step)
             progress_bar.update(1)
@@ -176,7 +177,7 @@ class Trainer:
         model_loss = 0
         quantizer_loss = 0
 
-        for _ in range(self.training_args.gradient_accumulation_steps):
+        for _ in range(self.generator_steps_before_discriminator):
             data = next(cycle(self.train_loader))[0].to(self.accelerator.device)
             step_type = StepType.MODEL
             model_output: ViTVQGANOutput = self.model(
@@ -195,14 +196,13 @@ class Trainer:
     def _discr_step(self):
         discr_loss = 0
 
-        for _ in range(self.training_args.gradient_accumulation_steps):
-            data = next(cycle(self.train_loader))[0].to(self.accelerator.device)
-            step_type = StepType.DISCRIMINATOR
-            model_output: ViTVQGANOutput = self.model(data, step_type)
+        data = next(cycle(self.train_loader))[0].to(self.accelerator.device)
+        step_type = StepType.DISCRIMINATOR
+        model_output: ViTVQGANOutput = self.model(data, step_type)
 
-            loss = self._fix_ddp_loss(model_output.loss)
-            self.accelerator.backward(loss)
-            discr_loss += loss.detach()
+        loss = self._fix_ddp_loss(model_output.loss)
+        self.accelerator.backward(loss)
+        discr_loss += loss.detach()
 
         self.discr_optimizer.step()
         self.discr_optimizer.zero_grad()

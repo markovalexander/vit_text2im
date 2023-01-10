@@ -46,7 +46,8 @@ class Discriminator(nn.Module):
         self.to_logits = nn.Sequential(
             nn.Conv2d(final_dim, final_dim, 1),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(final_dim, 1, last_kernel_size)
+            nn.Conv2d(final_dim, 1, last_kernel_size),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -120,10 +121,10 @@ class LossNetwork(nn.Module):
         return loss
 
     def discr_loss(self, real: Tensor, fake: Tensor) -> Tensor:
-        return torch.mean(-torch.log(1 - torch.sigmoid(fake) + 1e-10) - torch.log(torch.sigmoid(real) + 1e-10))
+        return torch.mean(torch.relu(1 + fake) + torch.relu(1 - real))
 
     def gen_loss(self, img: Tensor) -> Tensor:
-        return torch.mean(-torch.log(1e-10 + torch.sigmoid(img)))
+        return torch.mean(-img)
 
     def calculate_adaptive_weight(
       self,
